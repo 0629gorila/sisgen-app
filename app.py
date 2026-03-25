@@ -30,22 +30,63 @@ if not st.session_state.autenticado:
 
     st.stop()
 
-# -------- INTERFAZ --------
+# -------- DISEÑO NASA --------
+st.markdown("""
+<style>
+html, body, [class*="css"] {
+    background: linear-gradient(135deg, #0b1f3a, #000814) !important;
+}
+
+[data-testid="stAppViewContainer"] {
+    background-image: url("https://images.pexels.com/photos/373543/pexels-photo-373543.jpeg") !important;
+    background-size: cover !important;
+    background-position: center !important;
+}
+
+[data-testid="stAppViewContainer"]::before {
+    content: "";
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    z-index: -1;
+}
+
+.block-container {
+    background-color: rgba(0,0,0,0.6);
+    padding: 2rem;
+    border-radius: 12px;
+}
+
+h1 {
+    color: #4da6ff;
+    text-align: center;
+}
+
+label {
+    color: white !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# -------- LOGO PRINCIPAL --------
+st.image("logo_sisgen.png", width=180)
+
 st.title("Motor Documental SISGÉN")
 
+# -------- INPUTS --------
 empresa = st.text_input("Empresa")
 representante = st.text_input("Representante")
 direccion = st.text_input("Dirección")
 correo = st.text_input("Correo electrónico")
 fecha = st.text_input("Fecha")
 
-logo = st.file_uploader("Logo (OBLIGATORIO)", type=["png", "jpg", "jpeg"])
+logo = st.file_uploader("Logo del cliente (OBLIGATORIO)", type=["png", "jpg", "jpeg"])
 archivo = st.file_uploader("Documento Word o Excel", type=["docx", "xlsx"])
 
-# -------- BOTÓN --------
+# -------- GENERAR --------
 if st.button("Generar documento"):
 
-    # VALIDACIONES
     if not archivo:
         st.error("Debe subir un documento")
         st.stop()
@@ -91,7 +132,6 @@ if st.button("Generar documento"):
                     for p in cell.paragraphs:
                         reemplazar(p)
 
-        # LOGO OBLIGATORIO
         try:
             temp_logo = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
             temp_logo.write(logo.read())
