@@ -7,7 +7,31 @@ import tempfile
 
 st.set_page_config(page_title="SISGÉN PRO", layout="centered")
 
-# -------- DISEÑO NASA --------
+# -------- LOGIN --------
+usuarios = {
+    "admin": "1234",
+    "sisgen": "2026"
+}
+
+if "autenticado" not in st.session_state:
+    st.session_state.autenticado = False
+
+if not st.session_state.autenticado:
+
+    st.title("Acceso Plataforma SISGÉN")
+
+    user = st.text_input("Usuario")
+    password = st.text_input("Contraseña", type="password")
+
+    if st.button("Ingresar"):
+        if user in usuarios and usuarios[user] == password:
+            st.session_state.autenticado = True
+        else:
+            st.error("Credenciales incorrectas")
+
+    st.stop()
+
+# -------- DISEÑO --------
 st.markdown("""
 <style>
 html, body, [class*="css"] {
@@ -47,7 +71,10 @@ label {
 """, unsafe_allow_html=True)
 
 # -------- LOGO --------
-st.image("logo_sisgen.png", width=180)
+try:
+    st.image("logo_sisgen.png", width=180)
+except:
+    st.warning("Logo no encontrado")
 
 st.title("Motor Documental SISGÉN")
 
