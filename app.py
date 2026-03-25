@@ -58,18 +58,13 @@ html, body, [class*="css"] {
     border-radius: 12px;
 }
 
-h1 {
-    color: #4da6ff;
-    text-align: center;
-}
-
-label {
+h1, h2, h3, label {
     color: white !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# -------- LOGO PRINCIPAL --------
+# -------- LOGO --------
 st.image("logo_sisgen.png", width=180)
 
 st.title("Motor Documental SISGÉN")
@@ -92,7 +87,7 @@ if st.button("Generar documento"):
         st.stop()
 
     if not logo:
-        st.error("El logo es obligatorio")
+        st.error("Debe subir el logo")
         st.stop()
 
     if not empresa or not representante or not direccion or not correo:
@@ -104,34 +99,32 @@ if st.button("Generar documento"):
 
         doc = Document(archivo)
 
-        cambios = {
-            "EDIFICIO ONCE 94 - PROPIEDAD HORIZONTAL": empresa,
-            "OFELIA CORZO PINILLA": representante,
-            "CALLE 10 # 20-30": direccion,
-            "correo@ejemplo.com": correo,
-            "12/11/2025": fecha
-        }
+        def procesar(texto):
+            if texto:
+                texto = str(texto)
+                texto = texto.replace("TORRE AZUL", empresa)
+                texto = texto.replace("CONJUNTO", empresa)
+                texto = texto.replace("RESIDENCIAL", empresa)
+                texto = texto.replace("OFELIA CORZO PINILLA", representante)
+                texto = texto.replace("correo@ejemplo.com", correo)
 
-        def reemplazar(p):
-            texto = "".join(run.text for run in p.runs)
-            for clave, valor in cambios.items():
-                if clave in texto:
-                    texto = texto.replace(clave, valor)
-                    for run in p.runs:
-                        run.text = ""
-                    run = p.add_run(texto)
-                    run.bold = True
-                    return
+                if "fecha" in texto.lower():
+                    texto = fecha
 
+            return texto
+
+        # PÁRRAFOS
         for p in doc.paragraphs:
-            reemplazar(p)
+            p.text = procesar(p.text)
 
+        # TABLAS
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
                     for p in cell.paragraphs:
-                        reemplazar(p)
+                        p.text = procesar(p.text)
 
+        # LOGO EN ENCABEZADO
         try:
             temp_logo = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
             temp_logo.write(logo.read())
@@ -139,12 +132,21 @@ if st.button("Generar documento"):
             for section in doc.sections:
                 header = section.header
                 header.paragraphs[0].clear()
+
                 run = header.paragraphs[0].add_run()
                 run.add_picture(temp_logo.name, width=Inches(1.5))
+
+                header.paragraphs[0].add_run(f"   {empresa}")
 
         except:
             st.error("El logo no es válido")
             st.stop()
+
+        # PIE DE PÁGINA
+        for section in doc.sections:
+            footer = section.footer
+            footer.paragraphs[0].clear()
+            footer.paragraphs[0].add_run(f"Fecha de generación: {fecha}")
 
         temp_docx = tempfile.NamedTemporaryFile(delete=False, suffix=".docx")
         doc.save(temp_docx.name)
@@ -162,23 +164,20 @@ if st.button("Generar documento"):
 
         wb = load_workbook(temp_file.name)
 
-        cambios = {
-            "EDIFICIO ONCE 94 - PROPIEDAD HORIZONTAL": empresa,
-            "OFELIA CORZO PINILLA": representante,
-            "CALLE 10 # 20-30": direccion,
-            "correo@ejemplo.com": correo,
-            "12/11/2025": fecha
-        }
-
         for hoja in wb.worksheets:
             for fila in hoja.iter_rows():
                 for celda in fila:
                     if celda.value:
                         texto = str(celda.value)
-                        for clave, valor in cambios.items():
-                            if clave in texto:
-                                celda.value = texto.replace(clave, valor)
-                                celda.font = Font(bold=True)
+                        texto = texto.replace("TORRE AZUL", empresa)
+                        texto = texto.replace("OFELIA CORZO PINILLA", representante)
+                        texto = texto.replace("correo@ejemplo.com", correo)
+
+                        if "fecha" in texto.lower():
+                            texto = fecha
+
+                        celda.value = texto
+                        celda.font = Font(bold=True)
 
         temp_excel = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
         wb.save(temp_excel.name)
