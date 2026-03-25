@@ -4,8 +4,9 @@ from docx.shared import Inches
 from openpyxl import load_workbook
 from openpyxl.styles import Font
 import tempfile
+import re
 
-st.set_page_config(page_title="SISGÉN PRO", layout="centered")
+st.set_page_config(page_title="SISGÉN AI", layout="centered")
 
 # -------- LOGIN --------
 usuarios = {
@@ -17,7 +18,7 @@ if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
 
 if not st.session_state.autenticado:
-    st.title("Acceso Plataforma SISGÉN")
+    st.markdown("<h1 style='color:white;text-align:center;'>Acceso SISGÉN AI</h1>", unsafe_allow_html=True)
 
     user = st.text_input("Usuario")
     password = st.text_input("Contraseña", type="password")
@@ -30,44 +31,46 @@ if not st.session_state.autenticado:
 
     st.stop()
 
-# -------- DISEÑO NASA --------
+# -------- DISEÑO FUTURISTA --------
 st.markdown("""
 <style>
-html, body, [class*="css"] {
-    background: linear-gradient(135deg, #0b1f3a, #000814) !important;
+body {
+    background: black;
+}
+
+.stApp {
+    background: radial-gradient(circle at center, #0f2027, #203a43, #000000);
 }
 
 [data-testid="stAppViewContainer"] {
-    background-image: url("https://images.pexels.com/photos/373543/pexels-photo-373543.jpeg") !important;
-    background-size: cover !important;
-    background-position: center !important;
-}
-
-[data-testid="stAppViewContainer"]::before {
-    content: "";
-    position: fixed;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.6);
-    z-index: -1;
+    background-image: linear-gradient(120deg, rgba(0,255,255,0.08), rgba(0,0,0,1));
 }
 
 .block-container {
-    background-color: rgba(0,0,0,0.6);
+    background: rgba(0,0,0,0.8);
+    border-radius: 15px;
     padding: 2rem;
-    border-radius: 12px;
+    box-shadow: 0 0 25px rgba(0,255,255,0.3);
 }
 
 h1, h2, h3, label {
-    color: white !important;
+    color: #00ffff !important;
+    text-shadow: 0 0 5px #00ffff;
 }
+
+button {
+    background-color: #00ffff !important;
+    color: black !important;
+    border-radius: 10px !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
 # -------- LOGO --------
-st.image("logo_sisgen.png", width=180)
+st.image("logo_sisgen.png", width=150)
 
-st.title("Motor Documental SISGÉN")
+st.markdown("<h1 style='text-align:center;'>Motor Inteligente SISGÉN</h1>", unsafe_allow_html=True)
 
 # -------- INPUTS --------
 empresa = st.text_input("Empresa")
@@ -94,22 +97,35 @@ if st.button("Generar documento"):
         st.error("Complete todos los campos")
         st.stop()
 
-    # -------- WORD --------
+    # -------- WORD INTELIGENTE --------
     if archivo.name.endswith(".docx"):
 
         doc = Document(archivo)
 
-        def procesar(texto):
-            if texto:
-                texto = str(texto)
-                texto = texto.replace("TORRE AZUL", empresa)
-                texto = texto.replace("CONJUNTO", empresa)
-                texto = texto.replace("RESIDENCIAL", empresa)
-                texto = texto.replace("OFELIA CORZO PINILLA", representante)
-                texto = texto.replace("correo@ejemplo.com", correo)
+        def es_correo(texto):
+            return re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", texto)
 
-                if "fecha" in texto.lower():
-                    texto = fecha
+        def es_fecha(texto):
+            return re.search(r"\d{1,2}/\d{1,2}/\d{2,4}", texto)
+
+        def es_nombre(texto):
+            return texto.isupper() and len(texto.split()) >= 2
+
+        def procesar(texto):
+            if not texto:
+                return texto
+
+            if es_correo(texto):
+                return correo
+
+            elif es_fecha(texto):
+                return fecha
+
+            elif es_nombre(texto):
+                return representante
+
+            elif any(p in texto.lower() for p in ["conjunto", "residencial", "ph"]):
+                return empresa
 
             return texto
 
@@ -139,10 +155,10 @@ if st.button("Generar documento"):
                 header.paragraphs[0].add_run(f"   {empresa}")
 
         except:
-            st.error("El logo no es válido")
+            st.error("Error en el logo")
             st.stop()
 
-        # PIE DE PÁGINA
+        # PIE
         for section in doc.sections:
             footer = section.footer
             footer.paragraphs[0].clear()
@@ -169,11 +185,10 @@ if st.button("Generar documento"):
                 for celda in fila:
                     if celda.value:
                         texto = str(celda.value)
-                        texto = texto.replace("TORRE AZUL", empresa)
-                        texto = texto.replace("OFELIA CORZO PINILLA", representante)
-                        texto = texto.replace("correo@ejemplo.com", correo)
 
-                        if "fecha" in texto.lower():
+                        if "@" in texto:
+                            texto = correo
+                        elif "/" in texto:
                             texto = fecha
 
                         celda.value = texto
