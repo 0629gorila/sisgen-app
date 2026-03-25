@@ -1,1 +1,4 @@
-requirements.txt
+streamlit
+python-docx
+openpyxl
+docx2pdf
