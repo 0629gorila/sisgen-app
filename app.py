@@ -1,203 +1,113 @@
 import streamlit as st
 from docx import Document
 from docx.shared import Inches
-from openpyxl import load_workbook
-from openpyxl.styles import Font
 import tempfile
 import re
 
-st.set_page_config(page_title="SISGÉN AI", layout="centered")
+st.set_page_config(page_title="SISGÉN CORE", layout="centered")
 
 # -------- LOGIN --------
-usuarios = {
-    "admin": "1234",
-    "sisgen": "2026"
-}
+if "auth" not in st.session_state:
+    st.session_state.auth = False
 
-if "autenticado" not in st.session_state:
-    st.session_state.autenticado = False
+if not st.session_state.auth:
+    st.title("Acceso SISGÉN")
 
-if not st.session_state.autenticado:
-    st.markdown("<h1 style='color:white;text-align:center;'>Acceso SISGÉN AI</h1>", unsafe_allow_html=True)
-
-    user = st.text_input("Usuario")
-    password = st.text_input("Contraseña", type="password")
+    u = st.text_input("Usuario")
+    p = st.text_input("Contraseña", type="password")
 
     if st.button("Ingresar"):
-        if user in usuarios and usuarios[user] == password:
-            st.session_state.autenticado = True
+        if u == "admin" and p == "1234":
+            st.session_state.auth = True
         else:
             st.error("Credenciales incorrectas")
 
     st.stop()
 
-# -------- DISEÑO FUTURISTA --------
-st.markdown("""
-<style>
-body {
-    background: black;
-}
+# -------- UI --------
+st.title("Motor Documental SISGÉN")
 
-.stApp {
-    background: radial-gradient(circle at center, #0f2027, #203a43, #000000);
-}
-
-[data-testid="stAppViewContainer"] {
-    background-image: linear-gradient(120deg, rgba(0,255,255,0.08), rgba(0,0,0,1));
-}
-
-.block-container {
-    background: rgba(0,0,0,0.8);
-    border-radius: 15px;
-    padding: 2rem;
-    box-shadow: 0 0 25px rgba(0,255,255,0.3);
-}
-
-h1, h2, h3, label {
-    color: #00ffff !important;
-    text-shadow: 0 0 5px #00ffff;
-}
-
-button {
-    background-color: #00ffff !important;
-    color: black !important;
-    border-radius: 10px !important;
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-# -------- LOGO --------
-st.image("logo_sisgen.png", width=150)
-
-st.markdown("<h1 style='text-align:center;'>Motor Inteligente SISGÉN</h1>", unsafe_allow_html=True)
-
-# -------- INPUTS --------
 empresa = st.text_input("Empresa")
 representante = st.text_input("Representante")
-direccion = st.text_input("Dirección")
-correo = st.text_input("Correo electrónico")
+correo = st.text_input("Correo")
 fecha = st.text_input("Fecha")
 
-logo = st.file_uploader("Logo del cliente (OBLIGATORIO)", type=["png", "jpg", "jpeg"])
-archivo = st.file_uploader("Documento Word o Excel", type=["docx", "xlsx"])
+logo = st.file_uploader("Logo", type=["png","jpg"])
+archivo = st.file_uploader("Documento", type=["docx"])
 
-# -------- GENERAR --------
-if st.button("Generar documento"):
+# -------- FUNCIÓN SEGURA --------
+def reemplazar_run(run):
+    texto = run.text
 
-    if not archivo:
-        st.error("Debe subir un documento")
-        st.stop()
+    if not texto:
+        return
 
-    if not logo:
-        st.error("Debe subir el logo")
-        st.stop()
+    if "@" in texto:
+        run.text = correo
 
-    if not empresa or not representante or not direccion or not correo:
-        st.error("Complete todos los campos")
-        st.stop()
+    elif re.search(r"\d{1,2}/\d{1,2}/\d{2,4}", texto):
+        run.text = fecha
 
-    # -------- WORD INTELIGENTE --------
-    if archivo.name.endswith(".docx"):
+    elif texto.isupper() and len(texto.split()) > 1:
+        run.text = representante
+
+    elif any(x in texto.lower() for x in ["conjunto","ph","residencial"]):
+        run.text = empresa
+
+
+# -------- PROCESO --------
+if st.button("Generar"):
+
+    try:
+
+        if not archivo:
+            st.warning("Sube documento")
+            st.stop()
 
         doc = Document(archivo)
 
-        def es_correo(texto):
-            return re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", texto)
-
-        def es_fecha(texto):
-            return re.search(r"\d{1,2}/\d{1,2}/\d{2,4}", texto)
-
-        def es_nombre(texto):
-            return texto.isupper() and len(texto.split()) >= 2
-
-        def procesar(texto):
-            if not texto:
-                return texto
-
-            if es_correo(texto):
-                return correo
-
-            elif es_fecha(texto):
-                return fecha
-
-            elif es_nombre(texto):
-                return representante
-
-            elif any(p in texto.lower() for p in ["conjunto", "residencial", "ph"]):
-                return empresa
-
-            return texto
-
-        # PÁRRAFOS
+        # TEXTO
         for p in doc.paragraphs:
-            p.text = procesar(p.text)
+            for run in p.runs:
+                reemplazar_run(run)
 
         # TABLAS
-        for table in doc.tables:
-            for row in table.rows:
-                for cell in row.cells:
-                    for p in cell.paragraphs:
-                        p.text = procesar(p.text)
+        for t in doc.tables:
+            for r in t.rows:
+                for c in r.cells:
+                    for p in c.paragraphs:
+                        for run in p.runs:
+                            reemplazar_run(run)
 
-        # LOGO EN ENCABEZADO
-        try:
-            temp_logo = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-            temp_logo.write(logo.read())
+        # LOGO SEGURO
+        if logo:
+            try:
+                temp_logo = tempfile.NamedTemporaryFile(delete=False)
+                temp_logo.write(logo.read())
 
-            for section in doc.sections:
-                header = section.header
-                header.paragraphs[0].clear()
+                for s in doc.sections:
+                    header = s.header
+                    if header.paragraphs:
+                        run = header.paragraphs[0].add_run()
+                        run.add_picture(temp_logo.name, width=Inches(1.2))
 
-                run = header.paragraphs[0].add_run()
-                run.add_picture(temp_logo.name, width=Inches(1.5))
-
-                header.paragraphs[0].add_run(f"   {empresa}")
-
-        except:
-            st.error("Error en el logo")
-            st.stop()
+            except:
+                st.warning("Logo no compatible")
 
         # PIE
-        for section in doc.sections:
-            footer = section.footer
-            footer.paragraphs[0].clear()
-            footer.paragraphs[0].add_run(f"Fecha de generación: {fecha}")
+        for s in doc.sections:
+            footer = s.footer
+            footer.paragraphs[0].text = f"Fecha generación: {fecha}"
 
-        temp_docx = tempfile.NamedTemporaryFile(delete=False, suffix=".docx")
-        doc.save(temp_docx.name)
+        # GUARDAR
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".docx")
+        doc.save(tmp.name)
 
-        st.success("Documento generado correctamente")
+        st.success("Documento listo")
 
-        with open(temp_docx.name, "rb") as f:
-            st.download_button("Descargar Word", f)
+        with open(tmp.name, "rb") as f:
+            st.download_button("Descargar", f)
 
-    # -------- EXCEL --------
-    elif archivo.name.endswith(".xlsx"):
-
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
-        temp_file.write(archivo.read())
-
-        wb = load_workbook(temp_file.name)
-
-        for hoja in wb.worksheets:
-            for fila in hoja.iter_rows():
-                for celda in fila:
-                    if celda.value:
-                        texto = str(celda.value)
-
-                        if "@" in texto:
-                            texto = correo
-                        elif "/" in texto:
-                            texto = fecha
-
-                        celda.value = texto
-                        celda.font = Font(bold=True)
-
-        temp_excel = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
-        wb.save(temp_excel.name)
-
-        st.success("Excel generado correctamente")
-
-        with open(temp_excel.name, "rb") as f:
-            st.download_button("Descargar Excel", f)
+    except Exception as e:
+        st.error("Error controlado")
+        st.write(e)
