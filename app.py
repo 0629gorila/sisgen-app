@@ -11,7 +11,7 @@ if "auth" not in st.session_state:
     st.session_state.auth = False
 
 if not st.session_state.auth:
-    st.title("Acceso SISGÉN")
+    st.markdown("<h1 style='text-align:center;color:#00ffff;'>SISGÉN AI</h1>", unsafe_allow_html=True)
 
     u = st.text_input("Usuario")
     p = st.text_input("Contraseña", type="password")
@@ -24,15 +24,47 @@ if not st.session_state.auth:
 
     st.stop()
 
-# -------- UI --------
+# -------- DISEÑO FUTURISTA --------
+st.markdown("""
+<style>
+.stApp {
+    background: radial-gradient(circle at center, #0f2027, #000000);
+}
+
+.block-container {
+    background: rgba(0,0,0,0.8);
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 0 25px rgba(0,255,255,0.4);
+}
+
+h1, label {
+    color: #00ffff !important;
+}
+
+button {
+    background: #00ffff !important;
+    color: black !important;
+    border-radius: 10px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# -------- LOGO --------
+try:
+    st.image("logo_sisgen.png", width=150)
+except:
+    st.warning("Logo principal no encontrado")
+
 st.title("Motor Documental SISGÉN")
 
+# -------- INPUTS --------
 empresa = st.text_input("Empresa")
 representante = st.text_input("Representante")
 correo = st.text_input("Correo")
 fecha = st.text_input("Fecha")
 
-logo = st.file_uploader("Logo", type=["png","jpg"])
+logo = st.file_uploader("Logo cliente", type=["png","jpg","jpeg"])
 archivo = st.file_uploader("Documento", type=["docx"])
 
 # -------- FUNCIÓN SEGURA --------
@@ -54,9 +86,8 @@ def reemplazar_run(run):
     elif any(x in texto.lower() for x in ["conjunto","ph","residencial"]):
         run.text = empresa
 
-
 # -------- PROCESO --------
-if st.button("Generar"):
+if st.button("Generar documento"):
 
     try:
 
@@ -79,7 +110,7 @@ if st.button("Generar"):
                         for run in p.runs:
                             reemplazar_run(run)
 
-        # LOGO SEGURO
+        # LOGO CLIENTE
         if logo:
             try:
                 temp_logo = tempfile.NamedTemporaryFile(delete=False)
@@ -92,7 +123,7 @@ if st.button("Generar"):
                         run.add_picture(temp_logo.name, width=Inches(1.2))
 
             except:
-                st.warning("Logo no compatible")
+                st.warning("Logo cliente no compatible")
 
         # PIE
         for s in doc.sections:
@@ -106,7 +137,7 @@ if st.button("Generar"):
         st.success("Documento listo")
 
         with open(tmp.name, "rb") as f:
-            st.download_button("Descargar", f)
+            st.download_button("Descargar Word", f)
 
     except Exception as e:
         st.error("Error controlado")
